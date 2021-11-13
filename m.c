@@ -159,6 +159,8 @@ int main() {
 	
 	int total = 3;
 	int instr = 1;
+	int first = 1;
+	unsigned long first_time;
 	
 	while(total) {
 		char str[10];
@@ -169,7 +171,12 @@ int main() {
 			continue;
 		}
 
-		printf("C%c starts at %lu\n", p_list->proc_type+'1', nanotime());
+		if(first) {
+			first_time = nanotime();
+			first = 0;
+		}
+
+		printf("C%c starts at %lu\n", p_list->proc_type+'1', nanotime() - first_time);
 		
 		if(sh == RR) {
 			nanosleep(&ts, &ts);
