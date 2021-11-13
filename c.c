@@ -57,7 +57,11 @@ void* job(void *ptr) {
 	}
 	// Process writes sum to pipe. Note that any process writes this sum only when it's done with its task, so for C2 this
 	// can be interpreted as "Done printing".
-	write(write_pipe, &sum, sizeof(sum));
+	if (proc_type == '1') {
+		write(write_pipe, "Done printing", 14);
+	}
+	else
+		write(write_pipe, &sum, sizeof(sum));
 	close(write_pipe);
 	*finished = 1;
 	pthread_mutex_unlock(&sched_mutex);

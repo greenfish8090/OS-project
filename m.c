@@ -83,12 +83,16 @@ int send_instruction(plist_t **pp_list, char *str) {
 		shmdt(p_list->shseg);
 		shmctl(p_list->shmid, IPC_RMID, NULL);
 
-		unsigned long long sum;
-		read(p_list->read_pipe, &sum, sizeof(sum));
-		if(p_list->proc_type != 1)
+		if(p_list->proc_type != 1) {
+			unsigned long long sum;
+			read(p_list->read_pipe, &sum, sizeof(sum));
 			printf("C%c ended. Sum is %lld\n", p_list->proc_type+'1', sum);
-		else
-			printf("C2 is done printing\n");
+		}
+		else {
+			char buffer[15];
+			read(p_list->read_pipe, buffer, 14);
+			printf("C2 ended. %s\n", buffer);
+		}
 
 		plist_t *prev = p_list;
 		while(prev->next != p_list) prev = prev->next;
