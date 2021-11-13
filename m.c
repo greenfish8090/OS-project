@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
 			first = 0;
 		}
 
-		printf("C%c starts at %lu\n", p_list->proc_type+'1', nanotime() - first_time);
+		printf("C%c starts at %.3f\n", p_list->proc_type+'1', (float)(nanotime() - first_time)/1e6);
 		
 		strcpy(str, "start");
 		if(send_instruction(&p_list, str)) {

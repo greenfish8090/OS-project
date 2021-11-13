@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/shm.h>
 #include <pthread.h>
+#include <time.h>
 
 pthread_mutex_t sched_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t sched_cond = PTHREAD_COND_INITIALIZER;
@@ -18,6 +19,9 @@ unsigned long long sum = 0; // This is only used for C1 and C3
 int num; // The current number to be added to sum. For C1 this is just i in the loop. For C2 and C3 this is read from file.
 FILE* file; // This is only used for C2 and C3
 char file_path[10]; // ^^
+float cpu_time = 0;
+clock_t start;
+clock_t end;
 
 void* job(void *ptr) {
 	char *finished = (char*) ptr;
@@ -38,23 +42,33 @@ void* job(void *ptr) {
 		{
 			case '0':
 			// This is C1. Add numbers 1 to ni and store in sum
+				start = clock();
 				sum += (unsigned long long)i;
+				end = clock();
+				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 				break;
 			
 			case '1':
 			// This is C2. Read ni numbers from file and print to console
+				start = clock();
 				fscanf(file, "%d", &num);
         		printf("  In C2: %d\n", num);
+				end = clock();
+				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 				break;
 
 			case '2':
 			// This is C3. Read ni numbers from file and add them up
+				start = clock();
 				fscanf(file, "%d", &num);
         		sum += (unsigned long long)num;
+				end = clock();
+				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 				break;
 		}
 
 	}
+	printf("Total cpu time for process C%c: %.3f\n", proc_type - '0' + '1', cpu_time);
 	// Process writes sum to pipe. Note that any process writes this sum only when it's done with its task, so for C2 this
 	// can be interpreted as "Done printing".
 	if (proc_type == '1') {
