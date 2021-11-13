@@ -14,31 +14,47 @@ char sleeping = 0;
 char proc_type;
 int write_pipe;
 int ni;
-unsigned long long sum = 0; //This is only used by C1 and C3
+unsigned long long sum = 0; // This is only used for C1 and C3
+int num; // The current number to be added to sum. For C1 this is just i in the loop. For C2 and C3 this is read from file.
+FILE* file; // This is only used for C2 and C3
+char file_path[10]; // ^^
 
 void* job(void *ptr) {
 	char *finished = (char*) ptr;
 	pthread_detach(pthread_self());
 	
 	pthread_mutex_lock(&sched_mutex);
-	for(unsigned long long i = 0; i <= ni; i++) {
+	if (proc_type != '0') //Only open file if process is C2 or C3
+		file = fopen(file_path, "r");
+	for(int i = 0; i <= ni; i++) {
 		if(should_sleep) {
 			should_sleep = 0;
 			sleeping = 1;
 			pthread_cond_wait(&sched_cond, &sched_mutex);
 			sleeping = 0;
 		}
-		
-		//printf("%d %c\n", i, proc_type);
-		//fflush(stdout);
 
 		if (proc_type == '0') {
 		// This is C1. Add numbers 1 to ni and store in sum
-			sum += i;
+			sum += (unsigned long long)i;
+		}
+
+		if (proc_type == '1') {
+		// This is C2. Read ni numbers from file and print to console
+			fscanf(file, "%d", &num);
+        	printf("  In C2: %d\n", num);
+			sleep(1); // This is only because C2 is finishing too fast so we can't see a difference between FCFS and RR
+		}
+
+		if (proc_type == '2') {
+		// This is C3. Read ni numbers from file and add them up
+			fscanf(file, "%d", &num);
+        	sum += (unsigned long long)num;
 		}
 
 	}
-	//printf("%d\n", sum);
+	// Process writes sum to pipe. Note that any process writes this sum only when it's done with its task, so for C2 this
+	// can be interpreted as "Done printing".
 	write(write_pipe, &sum, sizeof(sum));
 	close(write_pipe);
 	*finished = 1;
@@ -51,11 +67,8 @@ int main(int argc, char** args) {
 	write_pipe = atoi(args[1]);
 	proc_type = args[3][0];
 	ni = atoi(args[4]);
-	
-	// char* msg = (char*) malloc(sizeof(char)*50);
-	// sprintf(msg, "H");
-	// write(write_pipe, msg, strlen(msg));
-	// close(write_pipe);
+	if (proc_type != '0') // If this is C2 or C3 we need the file path
+		strcpy(file_path, args[5]);
 	
 	key_t shmkey = atoi(args[2]);
 	int shmid = shmget(shmkey, 1024, 0666 | IPC_CREAT);

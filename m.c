@@ -82,10 +82,13 @@ int send_instruction(plist_t **pp_list, char *str) {
 		//printf("finished\n");
 		shmdt(p_list->shseg);
 		shmctl(p_list->shmid, IPC_RMID, NULL);
+
 		unsigned long long sum;
 		read(p_list->read_pipe, &sum, sizeof(sum));
-		
-		printf("C%c ended. Sum is %lld\n", p_list->proc_type+'1', sum);
+		if(p_list->proc_type != 1)
+			printf("C%c ended. Sum is %lld\n", p_list->proc_type+'1', sum);
+		else
+			printf("C2 is done printing\n");
 
 		plist_t *prev = p_list;
 		while(prev->next != p_list) prev = prev->next;
@@ -102,8 +105,8 @@ int send_instruction(plist_t **pp_list, char *str) {
 
 int main(int argc, char* argv[]) {
 
-	if (argc!=5) {
-		fprintf(stderr, "Usage ./m.out n1 n2 n3 alg\n");
+	if (argc!=7) {
+		fprintf(stderr, "Usage: ./m.out n1 n2 n3 alg f2 f3\n");
 		return -1;
 	}
 	sch_alg sh;
@@ -159,9 +162,13 @@ int main(int argc, char* argv[]) {
 			last_created = fork();
 			if(!last_created) {
 				close(p[READ_END]);
-				// Command: ./c <fd_write> <shmkey> <proc> <nx>
-				char* args[] = {"./c", itos(p[WRITE_END]), itos(shmkey), itos(i), argv[i+1], NULL};
-				execvp(args[0], args);
+				// Command: ./c <fd_write> <shmkey> <proc> <nx> for C1
+				// Command: ./c <fd_write> <shmkey> <proc> <nx> <file_path> for C2 and C3
+				char* args1[] = {"./c", itos(p[WRITE_END]), itos(shmkey), itos(i), argv[i+1], NULL};
+				char* args23[] = {"./c", itos(p[WRITE_END]), itos(shmkey), itos(i), argv[i+1], argv[i+4], NULL};
+				if(i) // If C2 or C3
+					execvp(args23[0], args23);
+				execvp(args1[0], args1);
 			}
 			else {
 				close(p[WRITE_END]);
@@ -181,12 +188,6 @@ int main(int argc, char* argv[]) {
 	while(total) {
 		char str[10];
 		strcpy(str, "start");
-		
-		if(send_instruction(&p_list, str)) {
-		// Process finished
-			total--;
-			continue;
-		}
 
 		if(first) {
 			first_time = nanotime();
@@ -194,6 +195,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		printf("C%c starts at %lu\n", p_list->proc_type+'1', nanotime() - first_time);
+		
+		if(send_instruction(&p_list, str)) {
+		// Process finished
+			total--;
+			continue;
+		}
 		
 		if(sh == RR) {
 			nanosleep(&ts, &ts);
