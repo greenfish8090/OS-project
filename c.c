@@ -34,22 +34,24 @@ void* job(void *ptr) {
 			sleeping = 0;
 		}
 
-		if (proc_type == '0') {
-		// This is C1. Add numbers 1 to ni and store in sum
-			sum += (unsigned long long)i;
-		}
+		switch (proc_type)
+		{
+			case '0':
+			// This is C1. Add numbers 1 to ni and store in sum
+				sum += (unsigned long long)i;
+				break;
+			
+			case '1':
+			// This is C2. Read ni numbers from file and print to console
+				fscanf(file, "%d", &num);
+        		printf("  In C2: %d\n", num);
+				break;
 
-		if (proc_type == '1') {
-		// This is C2. Read ni numbers from file and print to console
-			fscanf(file, "%d", &num);
-        	printf("  In C2: %d\n", num);
-			sleep(1); // This is only because C2 is finishing too fast so we can't see a difference between FCFS and RR
-		}
-
-		if (proc_type == '2') {
-		// This is C3. Read ni numbers from file and add them up
-			fscanf(file, "%d", &num);
-        	sum += (unsigned long long)num;
+			case '2':
+			// This is C3. Read ni numbers from file and add them up
+				fscanf(file, "%d", &num);
+        		sum += (unsigned long long)num;
+				break;
 		}
 
 	}
