@@ -79,8 +79,13 @@ int send_instruction(plist_t **pp_list, char *str) {
 	while(p_list->shseg->executing);
 	
 	if(finished) {
+		//printf("finished\n");
 		shmdt(p_list->shseg);
 		shmctl(p_list->shmid, IPC_RMID, NULL);
+		unsigned long long sum;
+		read(p_list->read_pipe, &sum, sizeof(sum));
+		
+		printf("C%c ended. Sum is %lld\n", p_list->proc_type+'1', sum);
 
 		plist_t *prev = p_list;
 		while(prev->next != p_list) prev = prev->next;
@@ -95,9 +100,19 @@ int send_instruction(plist_t **pp_list, char *str) {
 	return 0;
 }
 
-int main() {
-	int n1 = 10, n2 = 10, n3 = 10;
-	sch_alg sh = RR;
+int main(int argc, char* argv[]) {
+
+	if (argc!=5) {
+		fprintf(stderr, "Usage ./m.out n1 n2 n3 alg\n");
+		return -1;
+	}
+	sch_alg sh;
+	if (argv[4][0] == 'R') {
+		sh = RR;
+	}
+	else
+		sh = FCFS;
+
 	p_list = NULL;
 	pid_t last_created = getpid();
 	int is_child = 0;
@@ -144,7 +159,8 @@ int main() {
 			last_created = fork();
 			if(!last_created) {
 				close(p[READ_END]);
-				char* args[] = {"./c", itos(p[WRITE_END]), itos(shmkey), itos(i), NULL};
+				// Command: ./c <fd_write> <shmkey> <proc> <nx>
+				char* args[] = {"./c", itos(p[WRITE_END]), itos(shmkey), itos(i), argv[i+1], NULL};
 				execvp(args[0], args);
 			}
 			else {
@@ -167,6 +183,7 @@ int main() {
 		strcpy(str, "start");
 		
 		if(send_instruction(&p_list, str)) {
+		// Process finished
 			total--;
 			continue;
 		}
