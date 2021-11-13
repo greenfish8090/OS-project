@@ -12,13 +12,16 @@ pthread_cond_t sched_cond = PTHREAD_COND_INITIALIZER;
 char should_sleep = 1;
 char sleeping = 0;
 char proc_type;
+int write_pipe;
+int ni;
+unsigned long long sum = 0; //This is only used by C1 and C3
 
 void* job(void *ptr) {
 	char *finished = (char*) ptr;
 	pthread_detach(pthread_self());
 	
 	pthread_mutex_lock(&sched_mutex);
-	for(int i = 0; i < 100000000; i++) {
+	for(unsigned long long i = 0; i <= ni; i++) {
 		if(should_sleep) {
 			should_sleep = 0;
 			sleeping = 1;
@@ -28,8 +31,16 @@ void* job(void *ptr) {
 		
 		//printf("%d %c\n", i, proc_type);
 		//fflush(stdout);
+
+		if (proc_type == '0') {
+		// This is C1. Add numbers 1 to ni and store in sum
+			sum += i;
+		}
+
 	}
-	
+	//printf("%d\n", sum);
+	write(write_pipe, &sum, sizeof(sum));
+	close(write_pipe);
 	*finished = 1;
 	pthread_mutex_unlock(&sched_mutex);
 	
@@ -37,13 +48,14 @@ void* job(void *ptr) {
 }
 
 int main(int argc, char** args) {
-	int write_pipe = atoi(args[1]);
+	write_pipe = atoi(args[1]);
 	proc_type = args[3][0];
+	ni = atoi(args[4]);
 	
-	char* msg = (char*) malloc(sizeof(char)*50);
-	sprintf(msg, "H");
-	write(write_pipe, msg, strlen(msg));
-	close(write_pipe);
+	// char* msg = (char*) malloc(sizeof(char)*50);
+	// sprintf(msg, "H");
+	// write(write_pipe, msg, strlen(msg));
+	// close(write_pipe);
 	
 	key_t shmkey = atoi(args[2]);
 	int shmid = shmget(shmkey, 1024, 0666 | IPC_CREAT);
