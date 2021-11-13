@@ -191,7 +191,6 @@ int main(int argc, char* argv[]) {
 	
 	while(total) {
 		char str[10];
-		strcpy(str, "start");
 
 		if(first) {
 			first_time = nanotime();
@@ -200,6 +199,7 @@ int main(int argc, char* argv[]) {
 
 		printf("C%c starts at %lu\n", p_list->proc_type+'1', nanotime() - first_time);
 		
+		strcpy(str, "start");
 		if(send_instruction(&p_list, str)) {
 		// Process finished
 			total--;
