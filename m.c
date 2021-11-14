@@ -114,13 +114,17 @@ int send_instruction(plist_t **pp_list, char *str) {
 
 int main(int argc, char* argv[]) {
 
-	if (argc!=7) {
-		fprintf(stderr, "Usage: ./m.out n1 n2 n3 alg f2 f3\n");
+	long quantum = 0;
+	char* ptr_temp;
+
+	if (argc!=7 && argc!=8) {
+		fprintf(stderr, "Usage: ./m.out n1 n2 n3 alg f2 f3 time_quantum_ns\n");
 		return -1;
 	}
 	sch_alg sh;
 	if (argv[4][0] == 'R') {
 		sh = RR;
+		quantum = strtol(argv[7], &ptr_temp, 10);
 	}
 	else
 		sh = FCFS;
@@ -187,7 +191,7 @@ int main(int argc, char* argv[]) {
 	
 	struct timespec ts;
 	ts.tv_sec = 0;
-	ts.tv_nsec = 10000000;
+	ts.tv_nsec = quantum;
 	
 	int total = 3;
 	int instr = 1;
