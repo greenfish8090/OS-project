@@ -19,7 +19,7 @@ void main()
                 sprintf(n1_s, "%d", n1);
                 sprintf(n2_s, "%d", n2);
                 sprintf(n3_s, "%d", n3);
-                sprintf(quantum, "%d", 10000000);
+                sprintf(quantum, "%d", 5000000);
                 for(int i=0; i<2; ++i)
                 {
                     if (!fork())
