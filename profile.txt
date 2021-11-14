@@ -1,1 +1,0 @@
-n1, n2, n3, alg, wt_c1, tat_c1, wt_c2, tat_c2, wt_c3, tat_c3,
