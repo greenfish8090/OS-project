@@ -22,6 +22,7 @@ char file_path[10]; // ^^
 float cpu_time = 0;
 clock_t start;
 clock_t end;
+int started = 0;
 
 void* job(void *ptr) {
 	char *finished = (char*) ptr;
@@ -34,7 +35,15 @@ void* job(void *ptr) {
 		if(should_sleep) {
 			should_sleep = 0;
 			sleeping = 1;
+
+			if(started) {
+				end = clock();
+				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
+			}
+
 			pthread_cond_wait(&sched_cond, &sched_mutex);
+			started = 1;
+			start = clock();
 			sleeping = 0;
 		}
 
@@ -42,10 +51,7 @@ void* job(void *ptr) {
 		{
 			case '0':
 			// This is C1. Add numbers 1 to ni and store in sum
-				start = clock();
 				sum += (unsigned long long)i;
-				end = clock();
-				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 				break;
 			
 			case '1':
@@ -53,21 +59,18 @@ void* job(void *ptr) {
 				start = clock();
 				fscanf(file, "%d", &num);
         		printf("  In C2: %d\n", num);
-				end = clock();
-				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 				break;
 
 			case '2':
 			// This is C3. Read ni numbers from file and add them up
-				start = clock();
 				fscanf(file, "%d", &num);
         		sum += (unsigned long long)num;
-				end = clock();
-				cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 				break;
 		}
 
 	}
+	end = clock();
+	cpu_time += (float)(end - start) / (CLOCKS_PER_SEC / 1000.0f);
 	printf("Total cpu time for process C%c: %.3f\n", proc_type - '0' + '1', cpu_time);
 	// Process writes sum to pipe. Note that any process writes this sum only when it's done with its task, so for C2 this
 	// can be interpreted as "Done printing".
