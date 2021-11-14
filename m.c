@@ -55,6 +55,11 @@ typedef enum sched {
 
 int instr = 1;
 
+long int arrival_times[3];
+long int last_sleep_times[3];
+long int waiting_times[3];
+long int turn_around_times[3];
+
 // updates plist in case of finish
 // sends "finish" if process has finished, regardless of str
 // returns 1 on finish
@@ -188,20 +193,28 @@ int main(int argc, char* argv[]) {
 	int instr = 1;
 	int first = 1;
 	unsigned long first_time;
+	int ptype_temp;
 	
 	while(total) {
 		char str[10];
 
 		if(first) {
 			first_time = nanotime();
+			for(int i=0; i<3; ++i) {
+				arrival_times[i] = first_time;
+				last_sleep_times[i] = first_time;
+			}
 			first = 0;
 		}
 
-		printf("C%c starts at %lu\n", p_list->proc_type+'1', nanotime() - first_time);
-		
+		printf("C%c starts at %.3f\n", p_list->proc_type+'1', (float)(nanotime() - first_time)/1e6);
+
 		strcpy(str, "start");
+		waiting_times[p_list->proc_type] += nanotime() - last_sleep_times[p_list->proc_type];
+		ptype_temp = p_list->proc_type;
 		if(send_instruction(&p_list, str)) {
 		// Process finished
+			turn_around_times[ptype_temp] = nanotime() - arrival_times[ptype_temp];
 			total--;
 			continue;
 		}
@@ -210,7 +223,10 @@ int main(int argc, char* argv[]) {
 			nanosleep(&ts, &ts);
 			
 			strcpy(str, "sleep");
+			last_sleep_times[p_list->proc_type] = nanotime();
+			ptype_temp = p_list->proc_type;
 			if(send_instruction(&p_list, str)) {
+				turn_around_times[ptype_temp] = nanotime() - arrival_times[ptype_temp];
 				total--;
 				continue;
 			}
@@ -219,8 +235,9 @@ int main(int argc, char* argv[]) {
 			while(!p_list->shseg->finished);
 			
 			strcpy(str, "finish");
+			ptype_temp = p_list->proc_type;
 			send_instruction(&p_list, str);
-			
+			turn_around_times[ptype_temp] = nanotime() - arrival_times[ptype_temp];
 			total--;
 			continue;
 		}
@@ -231,6 +248,16 @@ int main(int argc, char* argv[]) {
 	int procs = 3;
 	while(procs--) printf("Child destroyed: %d\n", wait(NULL));
 	printf("All done\n");
+	procs = 3;
+	FILE* file = fopen("profile.txt", "a");
+	fprintf(file, "%d, %d, %d, %s, ", atoi(argv[1]), atoi(argv[2]), atoi(argv[3]), argv[4]);
+	while(procs--) {
+		//printf("Arrival time for C%c: %.3f\n", 2 - procs + '1', (float)arrival_times[2-procs]/1e6);
+		printf("Watiting time for C%c: %.3f\n", 2 - procs + '1', (float)waiting_times[2-procs]/1e6);
+		printf("TAT for C%c: %.3f\n", 2 - procs + '1', (float)turn_around_times[2-procs]/1e6);
+		fprintf(file, "%.3f, %.3f, ", (double)waiting_times[2-procs]/1e6, (double)turn_around_times[2-procs]/1e6);
+	}
+	fprintf(file, "\n");
 	
 	return 0;
 }
