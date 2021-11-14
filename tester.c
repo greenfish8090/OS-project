@@ -19,21 +19,34 @@ void main()
                 sprintf(n1_s, "%d", n1);
                 sprintf(n2_s, "%d", n2);
                 sprintf(n3_s, "%d", n3);
-                sprintf(quantum, "%d", 100000000);
-
-                if (!fork())
+                sprintf(quantum, "%d", 10000000);
+                for(int i=0; i<2; ++i)
                 {
-                    //printf("In child. Executing execlp...\n");
-                    if(execlp("./m", "./m", n1_s, n2_s, n3_s, "RR", "1m.txt", "1m_s.txt", quantum, NULL) == -1)
+                    if (!fork())
                     {
-                        printf("Error in execlp\n");
-                        exit(0);
+                        //printf("In child. Executing execlp...\n");
+                        if(i==0)
+                        {
+                            if(execlp("./m", "./m", n1_s, n2_s, n3_s, "RR", "1m.txt", "1m_s.txt", quantum, NULL) == -1)
+                            {
+                                printf("Error in execlp\n");
+                                exit(0);
+                            }
+                        }
+                        else
+                        {
+                            if(execlp("./m", "./m", n1_s, n2_s, n3_s, "FCFS", "1m.txt", "1m_s.txt", NULL) == -1)
+                            {
+                                printf("Error in execlp\n");
+                                exit(0);
+                            }
+                        }
                     }
-                }
-                else
-                {
-                    //printf("In parent. Waiting for execlp...\n");
-                    wait(NULL);
+                    else
+                    {
+                        //printf("In parent. Waiting for execlp...\n");
+                        wait(NULL);
+                    }
                 }
             }
         }
