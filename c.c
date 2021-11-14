@@ -56,7 +56,6 @@ void* job(void *ptr) {
 			
 			case '1':
 			// This is C2. Read ni numbers from file and print to console
-				start = clock();
 				fscanf(file, "%d", &num);
         		printf("  In C2: %d\n", num);
 				break;
