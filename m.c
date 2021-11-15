@@ -1,3 +1,16 @@
+/*
+Members:                       IDs:
+
+Yash Shah                      2019A7PS0102H
+Arjav Garg                     2019A7PS0068H
+Subienay Ganesh                2019A7PS0096H
+Nayan Sharma                   2019A7PS0114H
+Shah Aayush Keval              2019A7PS0137H
+Chaudhari Nisarg Sanjaykumar   2019A7PS0176H
+Pranav Balaji                  2019A7PS0040H
+Ayush Pote                     2019A7PS0112H
+
+*/
 #include "c.h"
 #include <sys/wait.h>
 #include <sys/ipc.h>
