@@ -13,23 +13,32 @@
 #include <stdint.h>
 #include <inttypes.h>
 #define BILLION  1000000000L
+
+/// Returns the cuurent time in nanoseconds
+/** This function uses clock_gettime to fetch the current time from the beginning of the epoch to calculate 
+ * the current time in nanoseconds, using the timespec struct to convert the data into a uint64_t value.
+ * @returns a uint64_t value representing the current time in nanoseconds
+ */
 uint64_t nanotime(void)
 {
-  long int ns;
-  uint64_t all;
-  time_t sec;
-  struct timespec spec;
+	long int ns;
+	uint64_t all;
+	time_t sec;
+	struct timespec spec;
 
-  clock_gettime(CLOCK_REALTIME, &spec);
-  sec = spec.tv_sec;
-  ns = spec.tv_nsec;
+	clock_gettime(CLOCK_REALTIME, &spec);
+	sec = spec.tv_sec;
+	ns = spec.tv_nsec;
 
-  all = (uint64_t) sec * BILLION + (uint64_t) ns;
+	all = (uint64_t) sec * BILLION + (uint64_t) ns;
 
-  return all;
+	return all;
 }
 
-
+/// Struct defining process variables
+/** Linked-list type struct defining all process relevant variables such as pid,
+ * pipes and shared memory info with sh_seg_t.
+ */
 typedef struct proc_list {
 	pid_t pid;
 	int proc_type;
@@ -40,8 +49,15 @@ typedef struct proc_list {
 	
 } plist_t;
 
+/// 
 plist_t *p_list, *tail;
 
+/// Function converting integers to string form
+/** This function converts integer values to a string format using snprintf
+ * 
+ * @returns a char* pointer pointing to the string
+ * @param x the input integer to convert
+ */
 char* itos(int x) {
 	int length = snprintf(NULL, 0, "%d", x);
 	char* str = malloc(sizeof(int) + 1);
@@ -49,31 +65,43 @@ char* itos(int x) {
 	return str;
 }
 
+/// Enum containing the types of scheduling that can be used
 typedef enum sched {
 	RR, FCFS
 } sch_alg;
 
-int instr = 1;
-
+/// Arrival Times for each process
 long int arrival_times[3];
+/// Time at which each process last slept
 long int last_sleep_times[3];
+/// Waiting Times for each process
 long int waiting_times[3];
+/// Turnaround Times for each process
 long int turn_around_times[3];
 
-// updates plist in case of finish
-// sends "finish" if process has finished, regardless of str
-// returns 1 on finish
+/// Function to send instructions to a process 
+/** This function sends the given instruction to the given process and checks if
+ * the process has completed its job. If it has, it returns a signal stating the same,
+ * or alternatively continues its job.
+ * 
+ * @returns 1 if the process given is finished, or 0 otherwise
+ * @param pp_list a double pointer pointing to the process to which the instruction is to be sent
+ * @param str the instruction to be sent to pp_list
+ */
 int send_instruction(plist_t **pp_list, char *str) {
 	plist_t *p_list = *pp_list;
 
+	//Wait for process to stop waiting
 	while(!p_list->shseg->waiting);
 	
+	//Check for finished state
 	char finished = 0;
 	if(p_list->shseg->finished) {
 		strcpy(str, "finish");
 		finished = 1;
 	}
 	
+	//Critical section: performing instruction
 	pthread_mutex_lock(&p_list->shseg->instr_ready_mutex);
 	p_list->shseg->executing = 1;
 	
@@ -81,8 +109,11 @@ int send_instruction(plist_t **pp_list, char *str) {
 	
 	pthread_cond_signal(&p_list->shseg->instr_ready_cond);
 	pthread_mutex_unlock(&p_list->shseg->instr_ready_mutex);
+
+	//wait for process to be done with execution
 	while(p_list->shseg->executing);
 	
+	// Has the process responded with a finished flag?
 	if(finished) {
 		//printf("finished\n");
 		shmdt(p_list->shseg);
@@ -109,14 +140,20 @@ int send_instruction(plist_t **pp_list, char *str) {
 		return 1;
 	}
 	
+	//Process not finished yet
 	return 0;
 }
 
+/// The main function where the arguments are processed and the process and scheduling is initialized
+/** @param argc Number of arguments
+ * @param argv String array containing the arguments
+ */
 int main(int argc, char* argv[]) {
 
 	long quantum = 0;
 	char* ptr_temp;
 
+	// Wrong argument format
 	if (argc!=7 && argc!=8) {
 		fprintf(stderr, "Usage: ./m.out n1 n2 n3 alg f2 f3 time_quantum_ns\n");
 		return -1;
@@ -132,6 +169,8 @@ int main(int argc, char* argv[]) {
 	p_list = NULL;
 	pid_t last_created = getpid();
 	int is_child = 0;
+
+	//Create all processes and associated threads
 	for(int i = 0; i < 3; i++) {
 		if(last_created) {
 			plist_t* new_proc;
@@ -145,6 +184,8 @@ int main(int argc, char* argv[]) {
 				tail->next = new_proc;
 				tail = tail->next;
 			}
+			
+			//Assign all variables in plist_t and sh_seg_t
 			
 			new_proc->pid = last_created;
 			
@@ -172,6 +213,9 @@ int main(int argc, char* argv[]) {
 			shseg->executing = 1;
 			shseg->waiting = 0;
 			
+			//We use execvp to execute c.c for each process.
+			//execvp() takes the filename to execute and an argument string array as input to execute the file with the given arguments.
+
 			last_created = fork();
 			if(!last_created) {
 				close(p[READ_END]);
@@ -189,16 +233,17 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	
+	//time quantum of an Round Robin algorithm (if used)
 	struct timespec ts;
 	ts.tv_sec = 0;
 	ts.tv_nsec = quantum;
 	
 	int total = 3;
-	int instr = 1;
 	int first = 1;
 	unsigned long first_time;
 	int ptype_temp;
 	
+	//Start with program execution, process by process based on the given scheduling algorithm
 	while(total) {
 		char str[10];
 
@@ -223,6 +268,7 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		
+		//Round Robin algorithm
 		if(sh == RR) {
 			nanosleep(&ts, &ts);
 			
@@ -235,7 +281,7 @@ int main(int argc, char* argv[]) {
 				continue;
 			}
 		}
-		else {
+		else { //First Come First Serve Algorithm
 			while(!p_list->shseg->finished);
 			
 			strcpy(str, "finish");
@@ -246,9 +292,11 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		
+		//next process in line for processing
 		p_list = p_list->next;
 	}
 	
+	//Accquire results from the processes
 	int procs = 3;
 	while(procs--) printf("Child destroyed: %d\n", wait(NULL));
 	printf("All done\n");

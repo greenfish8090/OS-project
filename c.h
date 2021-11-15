@@ -6,6 +6,10 @@
 #define WRITE_END 1
 #define READ_END 0
 
+/// Struct defined the shared memory of a process
+/** This structure contains all variables required for shared memory communication
+ * between the monitor threads and the processes.
+ */
 typedef struct sh_seg {
 	pthread_condattr_t instr_cond_attr;
 	pthread_mutexattr_t instr_mutex_attr;
@@ -17,6 +21,7 @@ typedef struct sh_seg {
 	char sched_instr[10];
 } sh_seg_t;
 
+/// 
 void monitor(int c);
 
 #endif
